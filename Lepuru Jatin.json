@@ -1,0 +1,160 @@
+{
+  "name": "Lepuru Jatin",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "LLMS",
+        "authentication": "basicAuth",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -576,
+        -32
+      ],
+      "id": "dc6484b1-9441-4a7f-ba2d-a9644ace1218",
+      "name": "Webhook",
+      "webhookId": "da0bae85-049a-4ea0-870d-74ed29add8d9",
+      "credentials": {
+        "httpBasicAuth": {
+          "id": "Km4QzOVrG2R8cXVV",
+          "name": "Unnamed credential"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "b5a1648f-ec6c-4722-b99f-980921e62412",
+              "name": "choices[0].message.content",
+              "value": "={{ $json.text }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        80,
+        -64
+      ],
+      "id": "1159685a-416c-449d-8d9b-8c2d5f6a4335",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=You are a JSON-only microservice. Read the input object and perform the requested task.\n\nINPUT FIELDS\n- task: one of \"sentiment\" or \"summary\"\n- text: the paragraph or statement to analyze (any language)\n\nRESPONSE RULES\n- Respond with *only* minified JSON (no code fences, no markdown, no explanations).\n- Match the input language when generating any text.\n- Keep it concise and useful for a UI.\n\nTASK LOGIC\nIf task == \"sentiment\":\n  - Classify overall_sentiment as exactly one of: \"Positive\", \"Negative\", \"Neutral\".\n  - Output schema:\n    {\n      \"task\":\"sentiment\",\n      \"overall_sentiment\":\"Positive|Negative|Neutral\"\n    }\n\nIf task == \"summary\":\n  - Provide a 1–2 sentence summary.\n  - Provide 2–4 key_points as short bullet phrases (no more than 12 words each).\n  - Optionally include a brief overall_sentiment if it’s obvious from the text, else omit it.\n  - Output schema:\n    {\n      \"task\":\"summary\",\n      \"summary\":\"...\",\n      \"key_points\":[\"...\",\"...\"],\n      \"overall_sentiment\":\"Positive|Negative|Neutral\"  // optional\n    }\n\nIf task is missing or not one of the allowed values:\n  - Return:\n    {\n      \"task\":\"error\",\n      \"message\":\"Unsupported task. Use 'sentiment' or 'summary'.\"\n    }\n\nEXAMPLES\nInput:\n{\"task\":\"sentiment\",\"text\":\"I loved the quick customer support, but shipping was slow.\"}\nOutput:\n{\"task\":\"sentiment\",\"overall_sentiment\":\"Positive\"}\n\nInput:\n{\"task\":\"summary\",\"text\":\"Our Q3 revenue rose 12% while costs increased 3%, improving margins.\"}\nOutput:\n{\"task\":\"summary\",\"summary\":\"Revenue outpaced cost growth, lifting margins in Q3.\",\"key_points\":[\"Revenue +12%\",\"Costs +3%\",\"Margins improved\"],\"overall_sentiment\":\"Positive\"}\n\nNOW PROCESS THIS:\n{\n  \"task\": \"{{ $json.body.type }}\",\n  \"text\": \"{{ $json.body.text }}\"\n}",
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.7,
+      "position": [
+        -288,
+        -32
+      ],
+      "id": "d4067217-8c91-41b1-8f67-aa7fd7b683b0",
+      "name": "Basic LLM Chain"
+    },
+    {
+      "parameters": {
+        "model": "google/gemma-3-27b-it:free",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenRouter",
+      "typeVersion": 1,
+      "position": [
+        -432,
+        256
+      ],
+      "id": "e9b79f75-cf37-4281-b682-25bf58baa890",
+      "name": "OpenRouter Chat Model",
+      "credentials": {
+        "openRouterApi": {
+          "id": "wm0jwsfSPenbCJkF",
+          "name": "OpenRouter account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json.choices[0].message.content }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        336,
+        -48
+      ],
+      "id": "da830ed2-a104-464f-b6b7-6b3d9d6719f0",
+      "name": "Respond to Webhook"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenRouter Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Basic LLM Chain": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "92d83f62-14f8-4a19-aa6d-2347d0208daf",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "f97c3bea8949bc5c9df9c168bd8f313924991c7f89e9c8e1fc28d1d32bde2394"
+  },
+  "id": "2wPwunLPdki21HjT",
+  "tags": []
+}
